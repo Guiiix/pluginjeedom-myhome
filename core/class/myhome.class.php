@@ -38,21 +38,25 @@ class myhome extends eqLogic {
 	
 	public static function dependancy_info() {
 		$return = array();
-		$return['log'] = 'myhome.update';
-		$return['progress_file'] = '/tmp/dependancy_myhome_in_progress';
-		if (exec('sudo dpkg --get-selections | grep python-serial | grep install | wc -l') != 0) {
-			$return['state'] = 'ok';
+        $return['log'] = log::getPathToLog(__CLASS__ . '_update');
+        $return['progress_file'] = jeedom::getTmpFolder(__CLASS__) . '/dependance';
+        if (file_exists(jeedom::getTmpFolder(__CLASS__) . '/dependance')) {
+            $return['state'] = 'in_progress';
 		} else {
+            if (exec(system::getCmdSudo() . system::get('cmd_check') . '-Ec "python3\-requests|python3\-voluptuous|python3\-bs4"') < 3) { // adaptez la liste des paquets et le total
 			$return['state'] = 'nok';
+            } elseif (exec(system::getCmdSudo() . 'pip3 list | grep -Ewc "aiohttp"') < 1) { // adaptez la liste des paquets et le total
+                $return['state'] = 'nok';
+            } else {
+                $return['state'] = 'ok';
+            }
 		}
 		return $return;
 	}
 
 	public static function dependancy_install() {
-		log::remove('myhome.update');
-		$cmd = 'sudo /bin/bash ' . dirname(__FILE__) . '/../../ressources/install.sh';
-		$cmd .= ' >> ' . log::getPathToLog('myhome.update') . ' 2>&1 &';
-		exec($cmd);
+        log::remove(__CLASS__ . '_update');
+        return array('script' => dirname(__FILE__) . '/../../resources/install_#stype#.sh ' . jeedom::getTmpFolder(__CLASS__) . '/dependance', 'log' => log::getPathToLog(__CLASS__ . '_update'));
 	}
 
 	public static function deamon_info() {
